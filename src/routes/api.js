@@ -4,14 +4,23 @@ import { asyncHandler, AppError, positiveInt, requiredString } from '../lib/http
 import { cypherInteger, runQuery, verifyConnection } from '../db/neo4j.js';
 import { node, relationship, scalar } from '../lib/serialize.js';
 import { config } from '../config.js';
+import * as github from '../services/github.js';
+import * as analysis from '../services/analysis.js';
 
 const router = Router();
 router.get('/health', asyncHandler(async (_req, res) => { await verifyConnection(); res.json({ status: 'ok', database: 'neo4j' }); }));
 router.get('/stats', asyncHandler(async (_req, res) => {
   const result = await runQuery(`MATCH (n) WITH labels(n)[0] AS label, count(*) AS count RETURN label, count`);
   const data = Object.fromEntries(result.records.map(r => [r.get('label'), scalar(r.get('count'))]));
-  res.json({ data: { developers: data.Developer || 0, repositories: data.Repository || 0, topics: data.Topic || 0, skills: data.Skill || 0 } });
+  const rels = await runQuery('MATCH ()-[r]->() RETURN count(r) AS count');
+  res.json({ data: { developers: data.Developer || 0, repositories: data.Repository || 0, topics: data.Topic || 0, skills: data.Skill || 0, relationships: scalar(rels.records[0].get('count')) } });
 }));
+router.post('/import/github/preview', asyncHandler(async (req, res) => res.json({ data: await github.preview(req.body?.repositoryUrl) })));
+router.post('/import/github', asyncHandler(async (req, res) => res.status(201).json({ data: await github.importRepository(req.body?.repositoryUrl) })));
+router.get('/ai/status', (_req, res) => res.json({ data: { configured: Boolean(process.env.GEMINI_API_KEY && process.env.AI_PROVIDER === 'gemini'), provider: process.env.AI_PROVIDER || null } }));
+router.get('/technologies/repositories', asyncHandler(async (req, res) => res.json({ data: await analysis.repositoriesForTechnology(req.query.name, positiveInt(req.query.limit, 50, 200)) })));
+router.get('/technologies/shared', asyncHandler(async (req, res) => res.json({ data: await analysis.sharedTechnologies(positiveInt(req.query.limit, 50, 200)) })));
+router.get('/repositories/:fullName/similar', asyncHandler(async (req, res) => res.json({ data: await analysis.similarRepositories(req.params.fullName, positiveInt(req.query.limit, 20, 100)) })));
 router.get('/graph', asyncHandler(async (req, res) => {
   const limit = Math.min(positiveInt(req.query.limit, 100, config.maxGraphNodes), config.maxGraphNodes);
   const result = await runQuery('MATCH (source)-[rel]->(target) RETURN source, rel, target LIMIT $limit', { limit: cypherInteger(limit) });
