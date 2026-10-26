@@ -1,4 +1,4 @@
-import { runQuery } from '../db/neo4j.js';
+import { cypherInteger, runQuery } from '../db/neo4j.js';
 import { AppError, optionalInteger, requiredString } from '../lib/http.js';
 import { node } from '../lib/serialize.js';
 
@@ -17,7 +17,7 @@ function clean(type, body, partial = false) {
   if (type === 'repositories' && result.stars !== undefined) optionalInteger(result.stars, 'stars');
   return result;
 }
-export async function list(type, limit) { const { label } = spec(type); const result = await runQuery(`MATCH (n:${label}) RETURN n ORDER BY n.${spec(type).key} LIMIT $limit`, { limit }); return result.records.map(r => node(r.get('n'))); }
+export async function list(type, limit) { const { label } = spec(type); const result = await runQuery(`MATCH (n:${label}) RETURN n ORDER BY n.${spec(type).key} LIMIT $limit`, { limit: cypherInteger(limit) }); return result.records.map(r => node(r.get('n'))); }
 export async function find(type, id) { const { label, key } = spec(type); const result = await runQuery(`MATCH (n:${label} {${key}: $id}) RETURN n`, { id }); return result.records[0] ? node(result.records[0].get('n')) : null; }
 export async function create(type, body) { const { label, key } = spec(type); const properties = clean(type, body); const result = await runQuery(`CREATE (n:${label}) SET n = $properties RETURN n`, { properties }); return node(result.records[0].get('n')); }
 export async function update(type, id, body) { const { label, key } = spec(type); const properties = clean(type, body, true); if (!Object.keys(properties).length) throw new AppError(400, 'At least one supported field is required'); const result = await runQuery(`MATCH (n:${label} {${key}: $id}) SET n += $properties RETURN n`, { id, properties }); return result.records[0] ? node(result.records[0].get('n')) : null; }
