@@ -4,7 +4,7 @@ export class AppError extends Error {
 export const asyncHandler = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 export function positiveInt(value, fallback = 50, maximum = 200) {
   if (value === undefined) return fallback;
-  const result = Number.parseInt(value, 10);
+  const result = Number(value);
   if (!Number.isInteger(result) || result < 1 || result > maximum) throw new AppError(400, `limit must be an integer between 1 and ${maximum}`);
   return result;
 }

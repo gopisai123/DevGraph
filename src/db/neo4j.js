@@ -3,6 +3,13 @@ import { config } from '../config.js';
 
 let driver;
 
+// The driver serializes plain JavaScript numbers as Cypher Float values.
+// LIMIT and traversal-depth parameters require Cypher Integer values.
+export function cypherInteger(value) {
+  if (!Number.isSafeInteger(value)) throw new TypeError('Neo4j integer parameters must be safe integers');
+  return neo4j.int(value);
+}
+
 export function getDriver() {
   if (!driver) {
     const { uri, username, password } = config.neo4j;
