@@ -1,0 +1,19 @@
+{
+  "name": "devgraph-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "REST API for the DevGraph skill and dependency explorer",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test",
+    "schema": "node scripts/cypher.js database/schema.cypher",
+    "seed": "node scripts/cypher.js database/seed.cypher"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "neo4j-driver": "^5.27.0"
+  }
+}
