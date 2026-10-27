@@ -22,7 +22,8 @@ router.get('/technologies/repositories', asyncHandler(async (req, res) => res.js
 router.get('/technologies/shared', asyncHandler(async (req, res) => res.json({ data: await analysis.sharedTechnologies(positiveInt(req.query.limit, 50, 200)) })));
 router.get('/repositories/:fullName/similar', asyncHandler(async (req, res) => res.json({ data: await analysis.similarRepositories(req.params.fullName, positiveInt(req.query.limit, 20, 100)) })));
 router.get('/graph', asyncHandler(async (req, res) => {
-  const limit = Math.min(positiveInt(req.query.limit, 100, config.maxGraphNodes), config.maxGraphNodes);
+  // A response-size limit protects the browser renderer; imports do not use this setting.
+  const limit = positiveInt(req.query.limit, config.graphMaxNodes, config.graphMaxNodes);
   const result = await runQuery('MATCH (source)-[rel]->(target) RETURN source, rel, target LIMIT $limit', { limit: cypherInteger(limit) });
   const nodes = new Map(); const edges = [];
   for (const r of result.records) { const source = node(r.get('source')); const target = node(r.get('target')); nodes.set(source.id, source); nodes.set(target.id, target); edges.push(relationship(r.get('rel'))); }

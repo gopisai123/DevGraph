@@ -10,7 +10,8 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 export const api = {
   health: () => request<{ status: string }>('/health'),
   stats: () => request<Record<string, number>>('/stats'),
-  graph: () => request<Graph>('/graph?limit=200'),
+  // Omit a limit to use the backend's GRAPH_MAX_NODES visualization setting.
+  graph: (limit?: number) => request<Graph>(`/graph${limit ? `?limit=${encodeURIComponent(limit)}` : ''}`),
   entities: (type: string) => request<GraphNode[]>(`/${type}?limit=200`),
   gaps: (username: string) => request<{ skill: string; domain: string; relevance: number }[]>(`/skills/gaps?username=${encodeURIComponent(username)}`),
   path: (from: string, to: string) => request<Graph>(`/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),

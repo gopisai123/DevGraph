@@ -46,3 +46,20 @@ test('persistence uses MERGE provenance and verifies the saved repository', asyn
   assert.match(calls[0].query, /provenance = 'github-languages'/);
   assert.equal(calls[0].mode, 'WRITE');
 });
+
+test('repository persistence does not impose the old 200-node visualization cap', async () => {
+  const repositoryNode = { elementId: '4:2', labels: ['Repository'], properties: { full_name: 'acme/large-stack', name: 'large-stack' } };
+  const integer = (value) => ({ toNumber: () => value });
+  const calls = [];
+  const execute = async (query, parameters) => {
+    calls.push({ query, parameters });
+    return calls.length === 1 ? { records: [{ get: () => repositoryNode }] } : { records: [{ get: (key) => ({ r: repositoryNode, topicCount: integer(205), skillCount: integer(250) })[key] }] };
+  };
+  const languages = Array.from({ length: 250 }, (_, index) => `technology-${index}`);
+  const topics = Array.from({ length: 205 }, (_, index) => `topic-${index}`);
+  const result = await persistRepository({ full_name: 'acme/large-stack', owner: 'acme', name: 'large-stack', description: '', language: 'technology-0', languages, topics, dependencies: [], stars: 0, forks: 0, html_url: 'https://github.com/acme/large-stack' }, execute);
+  assert.equal(calls[0].parameters.languages.length, 250);
+  assert.equal(calls[0].parameters.topics.length, 205);
+  assert.equal(result.skills, 250);
+  assert.doesNotMatch(calls[0].query, /LIMIT/i);
+});
